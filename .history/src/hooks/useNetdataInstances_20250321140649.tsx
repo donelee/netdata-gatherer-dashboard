@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export interface NetdataInstance {
   id: string;
@@ -6,38 +6,44 @@ export interface NetdataInstance {
   url: string;
 }
 
-let instances: NetdataInstance[] = [];
-
 export function useNetdataInstances() {
-  const [_, forceUpdate] = useState({});
+  const [instances, setInstances] = useState<NetdataInstance[]>(() => {
+    const savedInstances = localStorage.getItem('netdata-instances');
+    return savedInstances ? JSON.parse(savedInstances) : [];
+  });
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    localStorage.setItem('netdata-instances', JSON.stringify(instances));
+  }, [instances]);
+
   const addInstance = (name: string, url: string) => {
+    // Remove trailing slash if present
     const formattedUrl = url.endsWith('/') ? url.slice(0, -1) : url;
     const newInstance = {
       id: crypto.randomUUID(),
       name,
       url: formattedUrl
     };
-    instances.push(newInstance);
-    forceUpdate({});
-    return newInstance;
+    setInstances(prev => [
+      ...prev,
+      newInstance
+    ]);
+    return newInstance; // 添加这行代码
   };
 
   const removeInstance = (id: string) => {
-    instances = instances.filter(instance => instance.id !== id);
-    forceUpdate({});
+    setInstances(prev => prev.filter(instance => instance.id !== id));
   };
 
   const updateInstance = (id: string, updatedInstance: Partial<NetdataInstance>) => {
-    const instanceToUpdate = instances.find(instance => instance.id === id);
-    if (!instanceToUpdate) return;
-    const newInstance = { ...instanceToUpdate, ...updatedInstance };
-    instances = instances.map(instance =>
-      instance.id === id ? newInstance : instance
+    setInstances(prev => 
+      prev.map(instance => 
+        instance.id === id ? { ...instance, ...updatedInstance } : instance
+      )
     );
-    forceUpdate({});
   };
 
   const testConnection = async (url: string) => {
@@ -67,6 +73,6 @@ export function useNetdataInstances() {
     addInstance,
     removeInstance,
     updateInstance,
-    testConnection,
+    testConnection
   };
 }

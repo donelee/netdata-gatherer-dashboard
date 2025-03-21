@@ -40,7 +40,7 @@ export function MetricCard({
 
       // Corrected URL: Use the metricName prop
       const response = await fetch(
-        `${instanceUrl}/api/v1/data?chart=${metricName}&format=json&after=${fiveMinutesAgo}&before=${now}&points=60` // 修改数据点为60
+        `${instanceUrl}/api/v1/data?chart=${metricName}&format=json&after=${fiveMinutesAgo}&before=${now}&points=10` // 修改数据点为10
       );
 
       if (!response.ok) {
@@ -63,9 +63,6 @@ export function MetricCard({
         // Compare new and old data before updating
         if (JSON.stringify(data) !== JSON.stringify(formattedData)) { // 添加数据比较
           setData(formattedData);
-        } else {
-          // 如果数据没有变化，则不更新数据
-          console.log("data not changed");
         }
 
         setLastUpdated(new Date());

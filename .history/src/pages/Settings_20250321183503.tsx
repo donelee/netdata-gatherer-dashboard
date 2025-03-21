@@ -8,7 +8,6 @@ import { Layout } from "@/components/Layout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useNavigate } from "react-router-dom"; // 引入 useNavigate
 
 export default function Settings() {
   const { instances, addInstance, removeInstance, updateInstance, testConnection, dbError: instancesDbError } = useNetdataInstances(); // 修改这里
@@ -17,7 +16,6 @@ export default function Settings() {
   const [newName, setNewName] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isMobile = useIsMobile();
-  const navigate = useNavigate(); // 初始化 useNavigate
 
   const handleAddInstance = async () => {
     if (newName && newUrl) {
@@ -50,7 +48,6 @@ export default function Settings() {
     console.log("selectMetrics called with:", selectedMetrics);
     selectMetrics(selectedMetrics);
     console.log("metrics after save:", metrics); // 添加这行代码
-    navigate("/"); // 跳转到 Dashboard 页面
   };
 
   return (

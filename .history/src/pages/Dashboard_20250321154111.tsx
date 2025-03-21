@@ -9,7 +9,7 @@ import { Link } from "react-router-dom";
 
 export default function Dashboard() {
   const { instances } = useNetdataInstances();
-  const { fetchSelectedMetrics, metrics, error } = useNetdataMetrics(); // 修改这里
+  const { fetchSelectedMetrics, metrics, dbError } = useNetdataMetrics(); // 修改这里
   const [refreshInterval, setRefreshInterval] = useState(10000);
   const [selectedMetrics, setSelectedMetrics] = useState([]);
 
@@ -32,7 +32,7 @@ export default function Dashboard() {
     <Layout>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        {error && <div className="text-red-500">{error}</div>}
+        {dbError && <div className="text-red-500">{dbError}</div>}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4 mr-1" />

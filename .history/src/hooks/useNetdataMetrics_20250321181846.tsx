@@ -29,12 +29,14 @@ interface MetricResponse {
 
 let metrics: Metric[] = [];
 let selectedMetricIds: string[] = [];
+const MAX_METRICS = 500; // 设置最大指标数量
 
 export function useNetdataMetrics() {
   const [_, forceUpdate] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchKeyword, setSearchKeyword] = useState<string>(''); // 添加搜索关键词状态
+  const [dbError, setDbError] = useState<string | null>(null);
 
   const fetchMetricsList = async (instance: NetdataInstance) => {
     setIsLoading(true);
@@ -49,7 +51,7 @@ export function useNetdataMetrics() {
 
       const data = await response.json() as MetricResponse;
 
-      // Correctly access the charts property
+      // 正确访问 charts 属性
       const fetchedMetrics = Object.entries(data.charts).map(([metricName, metricDetails]) => ({
         id: crypto.randomUUID(),
         name: metricName,
@@ -57,9 +59,15 @@ export function useNetdataMetrics() {
         selected: false,
       }));
 
-      // Merge with existing metrics, keeping selected state
+      // 合并现有指标，保留选择状态
       metrics = metrics.filter(m => m.instanceId !== instance.id);
       metrics.push(...fetchedMetrics);
+
+      // 限制指标数量
+      if (metrics.length > MAX_METRICS) {
+        metrics.splice(0, metrics.length - MAX_METRICS); // 删除最旧的指标
+      }
+
       forceUpdate({});
 
       setIsLoading(false);
@@ -136,6 +144,8 @@ export function useNetdataMetrics() {
     fetchSelectedMetrics,
     getFilteredMetrics, // 导出过滤后的指标
     searchKeyword, // 导出搜索关键词
-    setSearchKeyword // 导出设置搜索关键词的函数
+    setSearchKeyword, // 导出设置搜索关键词的函数
+    dbError,
+    setDbError
   };
 }

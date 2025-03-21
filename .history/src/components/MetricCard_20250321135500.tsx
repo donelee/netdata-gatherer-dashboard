@@ -15,15 +15,11 @@ interface MetricDataPoint {
   value: number | null;
 }
 
-interface ChartDetails {
-  units: string;
-}
-
 export function MetricCard({
   metricName,
   instanceName,
   instanceUrl,
-  refreshInterval = 30000 // Default refresh every 30 seconds
+  refreshInterval = 10000 // Default refresh every 10 seconds
 }: MetricCardProps) {
   const [data, setData] = useState<MetricDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,7 +36,7 @@ export function MetricCard({
 
       // Corrected URL: Use the metricName prop
       const response = await fetch(
-        `${instanceUrl}/api/v1/data?chart=${metricName}&format=json&after=${fiveMinutesAgo}&before=${now}&points=60` // 修改数据点为60
+        `${instanceUrl}/api/v1/data?chart=${metricName}&format=json&after=${fiveMinutesAgo}&before=${now}&points=20`
       );
 
       if (!response.ok) {
@@ -50,28 +46,29 @@ export function MetricCard({
       const jsonData = await response.json();
       console.log("jsonData:", jsonData); // 添加这行代码
 
-      if (jsonData && jsonData.data && Array.isArray(jsonData.data) && jsonData.data.length > 0) { // 添加数据长度判断
+      if (jsonData && jsonData.data && Array.isArray(jsonData.data)) {
         // Netdata returns an array where:
         // - First element is timestamp
         // - Other elements are values for each dimension
-        // We'll take the second dimension for now
+        // We'll take the first dimension for now
         const formattedData = jsonData.data.map((point: number[]) => ({
           time: point[0] * 1000, // Convert to milliseconds for recharts
-          value: point.length > 2 ? point[2] : null // Use point[2] (used)
+          value: point.length > 1 ? point[1] : null
         }));
 
-        // Compare new and old data before updating
-        if (JSON.stringify(data) !== JSON.stringify(formattedData)) { // 添加数据比较
+        setData(formattedData);
+
+        // Get units from API response
+        // if (jsonData.units) {
+        //   setUnits(jsonData.units);
+        // }
+        if (JSON.stringify(data) !== JSON.stringify(formattedData)) {
           setData(formattedData);
-        } else {
-          // 如果数据没有变化，则不更新数据
-          console.log("data not changed");
         }
 
         setLastUpdated(new Date());
         setError(null);
       } else {
-        setIsLoading(false); // 添加isLoading设置
         throw new Error('Invalid data format received');
       }
     } catch (err) {
@@ -83,25 +80,8 @@ export function MetricCard({
     }
   };
 
-  const fetchChartDetails = async () => {
-    try {
-      const response = await fetch(`${instanceUrl}/api/v1/charts`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch chart details: ${response.statusText}`);
-      }
-      const data = await response.json();
-      const chartDetails = data.charts[metricName] as ChartDetails;
-      if (chartDetails && chartDetails.units) {
-        setUnits(chartDetails.units);
-      }
-    } catch (err) {
-      console.error('Error fetching chart details:', err);
-    }
-  };
-
   useEffect(() => {
     fetchMetricData();
-    fetchChartDetails();
 
     // Set up polling interval
     const intervalId = setInterval(fetchMetricData, refreshInterval);
@@ -176,7 +156,7 @@ export function MetricCard({
                     strokeWidth={1.5}
                     dot={false}
                     activeDot={{ r: 4 }}
-                    isAnimationActive={false} // 添加这行代码
+                    isAnimationActive={true}
                     animationDuration={300}
                   />
                 </LineChart>

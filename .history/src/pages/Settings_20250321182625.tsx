@@ -11,8 +11,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate } from "react-router-dom"; // 引入 useNavigate
 
 export default function Settings() {
-  const { instances, addInstance, removeInstance, updateInstance, testConnection, dbError: instancesDbError } = useNetdataInstances(); // 修改这里
-  const { metrics, fetchMetricsList, toggleMetricSelection, selectMetrics, getFilteredMetrics, removeInstanceMetrics, dbError: metricsDbError, searchKeyword, setSearchKeyword } = useNetdataMetrics(); // 修改这里
+  const { instances, addInstance, removeInstance, updateInstance, testConnection, error: instancesDbError } = useNetdataInstances(); // 修改这里
+  const { metrics, fetchMetricsList, toggleMetricSelection, selectMetrics, getFilteredMetrics, removeInstanceMetrics, error: metricsDbError, searchKeyword, setSearchKeyword } = useNetdataMetrics(); // 修改这里
   const [newUrl, setNewUrl] = useState("");
   const [newName, setNewName] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);

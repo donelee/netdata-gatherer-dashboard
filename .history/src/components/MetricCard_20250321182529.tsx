@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { RefreshCw } from "lucide-react";
 
@@ -30,48 +30,64 @@ export function MetricCard({
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [units, setUnits] = useState<string>('');
+  const lastDataPointTime = useRef<number | null>(null); // 用于记录最后一个数据点的时间
 
   const fetchMetricData = async () => {
     try {
       setIsLoading(true);
-      // Fetch the last 5 minutes of data with a step of 15 seconds
+      // 获取当前时间
       const now = Math.floor(Date.now() / 1000);
+      // 获取5分钟前的时间
       const fiveMinutesAgo = now - 300;
+      // 设置数据点数量
+      const points = 30; // 修改数据点为30
+      // 设置请求的开始时间
+      let after = fiveMinutesAgo;
+      // 如果已经有数据，则使用最后一个数据点的时间作为开始时间
+      if (lastDataPointTime.current !== null) {
+        after = lastDataPointTime.current;
+      }
 
-      // Corrected URL: Use the metricName prop
-      const response = await fetch(
-        `${instanceUrl}/api/v1/data?chart=${metricName}&format=json&after=${fiveMinutesAgo}&before=${now}&points=60` // 修改数据点为60
-      );
+      // 构建请求 URL
+      const url = `${instanceUrl}/api/v1/data?chart=${metricName}&format=json&after=${after}&before=${now}&points=${points}`;
+      console.log("fetchMetricData url:", url);
+
+      const response = await fetch(url);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch data: ${response.statusText}`);
       }
 
       const jsonData = await response.json();
-      console.log("jsonData:", jsonData); // 添加这行代码
+      console.log("jsonData:", jsonData);
 
-      if (jsonData && jsonData.data && Array.isArray(jsonData.data) && jsonData.data.length > 0) { // 添加数据长度判断
-        // Netdata returns an array where:
-        // - First element is timestamp
-        // - Other elements are values for each dimension
-        // We'll take the second dimension for now
+      if (jsonData && jsonData.data && Array.isArray(jsonData.data) && jsonData.data.length > 0) {
+        // Netdata 返回的数据格式：
+        // - 第一个元素是时间戳
+        // - 其他元素是每个维度的值
+        // 我们目前取第二个维度
         const formattedData = jsonData.data.map((point: number[]) => ({
-          time: point[0] * 1000, // Convert to milliseconds for recharts
-          value: point.length > 2 ? point[2] : null // Use point[2] (used)
+          time: point[0] * 1000, // 转换为毫秒，以便 recharts 使用
+          value: point.length > 2 ? point[2] : null // 使用 point[2] (used)
         }));
 
-        // Compare new and old data before updating
-        if (JSON.stringify(data) !== JSON.stringify(formattedData)) { // 添加数据比较
-          setData(formattedData);
-        } else {
-          // 如果数据没有变化，则不更新数据
-          console.log("data not changed");
-        }
+        // 更新最后一个数据点的时间
+        lastDataPointTime.current = jsonData.data[jsonData.data.length - 1][0];
+
+        // 增量更新数据
+        setData(prevData => {
+          // 如果是第一次获取数据，则直接返回新数据
+          if (prevData.length === 0) {
+            return formattedData;
+          }
+          // 否则，将新数据添加到旧数据后面
+          return [...prevData, ...formattedData];
+        });
 
         setLastUpdated(new Date());
         setError(null);
       } else {
-        setIsLoading(false); // 添加isLoading设置
+        setIsLoading(false);
         throw new Error('Invalid data format received');
       }
     } catch (err) {
@@ -103,18 +119,18 @@ export function MetricCard({
     fetchMetricData();
     fetchChartDetails();
 
-    // Set up polling interval
+    // 设置轮询间隔
     const intervalId = setInterval(fetchMetricData, refreshInterval);
 
     return () => clearInterval(intervalId);
   }, [metricName, instanceUrl, refreshInterval]);
 
-  // Format the time for the tooltip
+  // 格式化时间，用于 tooltip
   const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString();
   };
 
-  // Find a reasonable min/max for the chart based on the data
+  // 根据数据找到合理的图表最小值/最大值
   const dataMin = Math.min(...data.map(d => d.value !== null ? d.value : Infinity));
   const dataMax = Math.max(...data.map(d => d.value !== null ? d.value : -Infinity));
   const yDomain = [

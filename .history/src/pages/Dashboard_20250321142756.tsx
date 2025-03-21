@@ -1,6 +1,6 @@
 import { MetricCard } from "@/components/MetricCard";
 import { useNetdataInstances } from "@/hooks/useNetdataInstances";
-import { useNetdataMetrics } from "@/hooks/useNetdataMetrics"; // 修改这里
+import { useNetdataMetrics } from "@/hooks/useNetdataMetrics";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
@@ -9,13 +9,13 @@ import { Link } from "react-router-dom";
 
 export default function Dashboard() {
   const { instances } = useNetdataInstances();
-  const { fetchSelectedMetrics, metrics, error } = useNetdataMetrics(); // 修改这里
+  const { fetchSelectedMetrics, metrics } = useNetdataMetrics();
   const [refreshInterval, setRefreshInterval] = useState(10000);
   const [selectedMetrics, setSelectedMetrics] = useState([]);
 
   useEffect(() => {
     setSelectedMetrics(fetchSelectedMetrics());
-  }, [fetchSelectedMetrics]); // 修改依赖项
+  }, [metrics]);
 
   console.log("metrics:", metrics); // 添加这行代码
   console.log("selectedMetrics:", selectedMetrics); // 添加这行代码
@@ -32,7 +32,6 @@ export default function Dashboard() {
     <Layout>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        {error && <div className="text-red-500">{error}</div>}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCw className="h-4 w-4 mr-1" />

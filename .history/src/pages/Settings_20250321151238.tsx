@@ -2,22 +2,20 @@ import { InstanceCard } from "@/components/InstanceCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNetdataInstances } from "@/hooks/useNetdataInstances";
-import { useNetdataMetrics } from "@/hooks/useNetdataMetrics"; // 修改这里
+import useNetdataMetrics from "@/hooks/useNetdataMetrics"; // 修改这里
 import { useState } from "react";
 import { Layout } from "@/components/Layout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useNavigate } from "react-router-dom"; // 引入 useNavigate
 
 export default function Settings() {
-  const { instances, addInstance, removeInstance, updateInstance, testConnection, dbError: instancesDbError } = useNetdataInstances(); // 修改这里
-  const { metrics, fetchMetricsList, toggleMetricSelection, selectMetrics, getFilteredMetrics, removeInstanceMetrics, dbError: metricsDbError, searchKeyword, setSearchKeyword } = useNetdataMetrics(); // 修改这里
+  const { instances, addInstance, removeInstance, updateInstance, testConnection } = useNetdataInstances();
+  const { metrics, fetchMetricsList, toggleMetricSelection, selectMetrics, getInstanceMetrics, removeInstanceMetrics } = useNetdataMetrics(); // 修改这里
   const [newUrl, setNewUrl] = useState("");
   const [newName, setNewName] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isMobile = useIsMobile();
-  const navigate = useNavigate(); // 初始化 useNavigate
 
   const handleAddInstance = async () => {
     if (newName && newUrl) {
@@ -50,15 +48,12 @@ export default function Settings() {
     console.log("selectMetrics called with:", selectedMetrics);
     selectMetrics(selectedMetrics);
     console.log("metrics after save:", metrics); // 添加这行代码
-    navigate("/"); // 跳转到 Dashboard 页面
   };
 
   return (
     <Layout>
       <div className="flex flex-col gap-4">
         <h1 className="text-3xl font-bold">Settings</h1>
-        {instancesDbError && <div className="text-red-500">{instancesDbError}</div>}
-        {metricsDbError && <div className="text-red-500">{metricsDbError}</div>}
 
         <div className="flex flex-col gap-2">
           <h2 className="text-xl font-semibold">Add Netdata Instance</h2>
@@ -95,20 +90,10 @@ export default function Settings() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <div className="flex justify-between items-center"> {/* 添加这行代码 */}
-            <h2 className="text-xl font-semibold">Metrics</h2>
-            <Button onClick={handleSaveMetrics}>Save Metrics</Button> {/* 添加这行代码 */}
-          </div> {/* 添加这行代码 */}
-          <Input
-            type="text"
-            placeholder="Search metrics..."
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)} // 添加搜索框
-            className="mb-2"
-          />
+          <h2 className="text-xl font-semibold">Metrics</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {instances.map((instance) => {
-              const instanceMetrics = getFilteredMetrics(instance.id); // 使用过滤后的指标
+              const instanceMetrics = getInstanceMetrics(instance.id);
               console.log("instanceMetrics for instance", instance.name, ":", instanceMetrics); // 添加这行代码
               return instanceMetrics.map((metric) => (
                 <div key={metric.id} className="flex items-center space-x-2">
@@ -124,6 +109,7 @@ export default function Settings() {
               ));
             })}
           </div>
+          <Button onClick={handleSaveMetrics}>Save Metrics</Button>
         </div>
       </div>
     </Layout>

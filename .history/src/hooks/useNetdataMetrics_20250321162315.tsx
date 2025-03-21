@@ -34,7 +34,6 @@ export function useNetdataMetrics() {
   const [_, forceUpdate] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchKeyword, setSearchKeyword] = useState<string>(''); // 添加搜索关键词状态
 
   const fetchMetricsList = async (instance: NetdataInstance) => {
     setIsLoading(true);
@@ -112,17 +111,6 @@ export function useNetdataMetrics() {
     forceUpdate({});
   };
 
-  // 添加过滤指标的函数
-  const getFilteredMetrics = (instanceId: string) => {
-    const instanceMetrics = getInstanceMetrics(instanceId);
-    if (!searchKeyword) {
-      return instanceMetrics;
-    }
-    return instanceMetrics.filter(metric =>
-      metric.name.toLowerCase().includes(searchKeyword.toLowerCase())
-    );
-  };
-
   return {
     metrics,
     isLoading,
@@ -134,8 +122,5 @@ export function useNetdataMetrics() {
     getSelectedMetrics,
     removeInstanceMetrics,
     fetchSelectedMetrics,
-    getFilteredMetrics, // 导出过滤后的指标
-    searchKeyword, // 导出搜索关键词
-    setSearchKeyword // 导出设置搜索关键词的函数
   };
 }

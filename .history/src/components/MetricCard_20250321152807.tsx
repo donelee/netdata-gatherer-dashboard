@@ -15,10 +15,6 @@ interface MetricDataPoint {
   value: number | null;
 }
 
-interface ChartDetails {
-  units: string;
-}
-
 export function MetricCard({
   metricName,
   instanceName,
@@ -40,7 +36,7 @@ export function MetricCard({
 
       // Corrected URL: Use the metricName prop
       const response = await fetch(
-        `${instanceUrl}/api/v1/data?chart=${metricName}&format=json&after=${fiveMinutesAgo}&before=${now}&points=60` // 修改数据点为60
+        `${instanceUrl}/api/v1/data?chart=${metricName}&format=json&after=${fiveMinutesAgo}&before=${now}&points=10` // 修改数据点为10
       );
 
       if (!response.ok) {
@@ -60,12 +56,14 @@ export function MetricCard({
           value: point.length > 2 ? point[2] : null // Use point[2] (used)
         }));
 
+        // Get units from API response
+        if (jsonData.units) { // 添加units判断
+          setUnits(jsonData.units);
+        }
+
         // Compare new and old data before updating
         if (JSON.stringify(data) !== JSON.stringify(formattedData)) { // 添加数据比较
           setData(formattedData);
-        } else {
-          // 如果数据没有变化，则不更新数据
-          console.log("data not changed");
         }
 
         setLastUpdated(new Date());
@@ -83,25 +81,8 @@ export function MetricCard({
     }
   };
 
-  const fetchChartDetails = async () => {
-    try {
-      const response = await fetch(`${instanceUrl}/api/v1/charts`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch chart details: ${response.statusText}`);
-      }
-      const data = await response.json();
-      const chartDetails = data.charts[metricName] as ChartDetails;
-      if (chartDetails && chartDetails.units) {
-        setUnits(chartDetails.units);
-      }
-    } catch (err) {
-      console.error('Error fetching chart details:', err);
-    }
-  };
-
   useEffect(() => {
     fetchMetricData();
-    fetchChartDetails();
 
     // Set up polling interval
     const intervalId = setInterval(fetchMetricData, refreshInterval);

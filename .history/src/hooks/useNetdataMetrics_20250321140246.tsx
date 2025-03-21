@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NetdataInstance } from './useNetdataInstances';
 
 export interface Metric {
@@ -27,19 +27,24 @@ interface MetricResponse {
   };
 }
 
-let metrics: Metric[] = [];
-let selectedMetricIds: string[] = [];
-
 export function useNetdataMetrics() {
-  const [_, forceUpdate] = useState({});
+  const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [selectedMetricIds, setSelectedMetricIds] = useState<string[]>(() => {
+    const savedSelectedMetrics = localStorage.getItem('netdata-selected-metrics');
+    return savedSelectedMetrics ? JSON.parse(savedSelectedMetrics) : [];
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [searchKeyword, setSearchKeyword] = useState<string>(''); // 添加搜索关键词状态
+
+  useEffect(() => {
+    localStorage.setItem('netdata-selected-metrics', JSON.stringify(selectedMetricIds));
+  }, [selectedMetricIds]);
 
   const fetchMetricsList = async (instance: NetdataInstance) => {
     setIsLoading(true);
     setError(null);
-    console.log("fetchMetricsList called for instance:", instance);
+
     try {
       const response = await fetch(`${instance.url}/api/v1/charts`);
 
@@ -58,9 +63,23 @@ export function useNetdataMetrics() {
       }));
 
       // Merge with existing metrics, keeping selected state
-      metrics = metrics.filter(m => m.instanceId !== instance.id);
-      metrics.push(...fetchedMetrics);
-      forceUpdate({});
+      setMetrics(prev => {
+        // Keep metrics from other instances
+        const otherInstanceMetrics = prev.filter(m => m.instanceId !== instance.id);
+
+        // Map through new metrics and preserve selected state if the metric already existed
+        const updatedInstanceMetrics = fetchedMetrics.map(newMetric => {
+          const existingMetric = prev.find(m =>
+            m.instanceId === instance.id && m.name === newMetric.name
+          );
+
+          return existingMetric
+            ? { ...newMetric, id: existingMetric.id, selected: existingMetric.selected }
+            : newMetric;
+        });
+
+        return [...otherInstanceMetrics, ...updatedInstanceMetrics];
+      });
 
       setIsLoading(false);
       return fetchedMetrics;
@@ -73,26 +92,17 @@ export function useNetdataMetrics() {
   };
 
   const toggleMetricSelection = (metricId: string) => {
-    metrics = metrics.map(metric => {
-      if (metric.id === metricId) {
-        return { ...metric, selected: !metric.selected };
+    setSelectedMetricIds(prev => {
+      if (prev.includes(metricId)) {
+        return prev.filter(id => id !== metricId);
+      } else {
+        return [...prev, metricId];
       }
-      return metric;
     });
-    if (selectedMetricIds.includes(metricId)) {
-      selectedMetricIds = selectedMetricIds.filter(id => id !== metricId);
-    } else {
-      selectedMetricIds.push(metricId);
-    }
-    forceUpdate({});
   };
 
   const selectMetrics = (metricIds: string[]) => {
-    selectedMetricIds = metricIds;
-    metrics = metrics.map(metric => {
-      return { ...metric, selected: metricIds.includes(metric.id) };
-    });
-    forceUpdate({});
+    setSelectedMetricIds(metricIds);
   };
 
   const getInstanceMetrics = (instanceId: string) => {
@@ -108,19 +118,7 @@ export function useNetdataMetrics() {
   };
 
   const removeInstanceMetrics = (instanceId: string) => {
-    metrics = metrics.filter(metric => metric.instanceId !== instanceId);
-    forceUpdate({});
-  };
-
-  // 添加过滤指标的函数
-  const getFilteredMetrics = (instanceId: string) => {
-    const instanceMetrics = getInstanceMetrics(instanceId);
-    if (!searchKeyword) {
-      return instanceMetrics;
-    }
-    return instanceMetrics.filter(metric =>
-      metric.name.toLowerCase().includes(searchKeyword.toLowerCase())
-    );
+    setMetrics(prev => prev.filter(metric => metric.instanceId !== instanceId));
   };
 
   return {
@@ -133,9 +131,6 @@ export function useNetdataMetrics() {
     getInstanceMetrics,
     getSelectedMetrics,
     removeInstanceMetrics,
-    fetchSelectedMetrics,
-    getFilteredMetrics, // 导出过滤后的指标
-    searchKeyword, // 导出搜索关键词
-    setSearchKeyword // 导出设置搜索关键词的函数
+    fetchSelectedMetrics
   };
 }
